@@ -11,52 +11,7 @@ POST /ask     →  embed question  →  vector search  →  gpt-4o-mini  →  gr
 
 ---
 
-## 1. Supabase Setup (one-time)
-
-Run the following SQL in your **Supabase SQL Editor**:
-
-```sql
--- Enable pgvector
-create extension if not exists vector;
-
--- Documents table
-create table documents (
-  id          bigserial primary key,
-  content     text not null,
-  metadata    jsonb default '{}'::jsonb,
-  embedding   vector(1536),
-  created_at  timestamptz default now()
-);
-
--- Vector similarity search function
-create or replace function match_documents(
-  query_embedding vector(1536),
-  match_threshold float default 0.5,
-  match_count     int    default 5
-)
-returns table (
-  id         bigint,
-  content    text,
-  metadata   jsonb,
-  similarity float
-)
-language sql stable
-as $$
-  select
-    id,
-    content,
-    metadata,
-    1 - (embedding <=> query_embedding) as similarity
-  from documents
-  where 1 - (embedding <=> query_embedding) > match_threshold
-  order by embedding <=> query_embedding
-  limit match_count;
-$$;
-```
-
----
-
-## 2. Local Setup
+## 1. Local Setup
 
 ```bash
 # Create and activate virtual environment
@@ -66,8 +21,6 @@ source .venv/bin/activate
 # Install dependencies
 pip install -r requirements.txt
 
-# Copy env file and fill in your keys
-cp .env.example .env
 ```
 
 Edit `.env`:
