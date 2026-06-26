@@ -1,5 +1,8 @@
+import logging
 from supabase import acreate_client, AsyncClient
 from app.config import settings
+
+logger = logging.getLogger(__name__)
 
 _client: AsyncClient | None = None
 
@@ -8,6 +11,7 @@ async def get_client() -> AsyncClient:
     """Return a lazily-created async Supabase client."""
     global _client
     if _client is None:
+        logger.debug("Creating new Supabase async client")
         _client = await acreate_client(
             settings.supabase_url,
             settings.supabase_service_key,
@@ -21,6 +25,7 @@ async def insert_document(
     metadata: dict,
 ) -> dict:
     """Insert a document with its embedding into the documents table."""
+    logger.debug("Inserting document into Supabase")
     client = await get_client()
     response = (
         await client.table("documents")
@@ -33,6 +38,7 @@ async def insert_document(
         )
         .execute()
     )
+    logger.debug(f"Document inserted with id={response.data[0]['id']}")
     return response.data[0]
 
 
@@ -42,6 +48,7 @@ async def match_documents(
     match_threshold: float,
 ) -> list[dict]:
     """Run pgvector similarity search via the match_documents RPC function."""
+    logger.debug(f"Running vector search — count={match_count}, threshold={match_threshold}")
     client = await get_client()
     response = await client.rpc(
         "match_documents",
@@ -51,4 +58,6 @@ async def match_documents(
             "match_threshold": match_threshold,
         },
     ).execute()
-    return response.data or []
+    results = response.data or []
+    logger.debug(f"Vector search returned {len(results)} result(s)")
+    return results
